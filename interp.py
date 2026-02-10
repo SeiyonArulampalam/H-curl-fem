@@ -309,6 +309,7 @@ if __name__ == "__main__":
             [0.0, 1.0],  # node 2
             [1.0, 1.0],  # node 3
             [2.0, 1.0],  # node 4
+            [2.0, 0.0],  # node 4
         ]
     )
 
@@ -317,6 +318,7 @@ if __name__ == "__main__":
         [1, 2, 0],  # e0
         [3, 2, 1],  # e1
         [1, 4, 3],  # e2
+        [1, 5, 4],  # e3
     ]
 
     edge_conn = [
@@ -329,19 +331,24 @@ if __name__ == "__main__":
         [3, 1],  # E6
         [1, 4],  # E7
         [4, 3],  # E8
+        [1, 5],  # E9
+        [5, 4],  # E10
+        [4, 1],  # E11
     ]
 
     elem_edge_conn = [
         [2, 0, 1],
         [5, 3, 4],
         [7, 8, 6],
+        [9, 10, 11],
     ]
 
     # Plot the mesh and the connectivity
     plot_mesh(X, elem_conn, edge_conn, elem_edge_conn)
 
     # Assemble stiffness matrix
-    K = np.zeros((9, 9))
+    nelems = len(elem_conn)
+    K = np.zeros((3 * nelems, 3 * nelems))
     # Loop through each element
     for e in range(len(elem_conn)):
         visualize_element_basis(
@@ -352,6 +359,7 @@ if __name__ == "__main__":
             title=f"Element {e} H(curl)",
         )
 
+        # Compute the local stiffness matrix (3x3)
         for i in range(3):
             row = elem_edge_conn[e][i]
             for j in range(3):
@@ -365,22 +373,40 @@ if __name__ == "__main__":
     # Define G
     G = np.array(
         [
-            [0, 1, 0, 0, 0, 1, 0, 0, 0],
-            [0, 0, 0, 1, 0, 0, 1, 0, 0],
+            [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],  # edge 1, 5
+            [0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0],  # edge 3, 6
+            [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],  # edge 7, 11
         ]
     )
 
     # New system
-    E = np.zeros((11, 11))
-    E[0:9, 0:9] = K
-    E[0:9, [-1, -2]] = G.T
-    E[[-1, -2], 0:9] = G
-    rhs = np.zeros(11)
+    num_shared_edges = 3
+    E = np.zeros((3 * nelems + num_shared_edges, 3 * nelems + num_shared_edges))
+    E[0 : 3 * nelems, 0 : 3 * nelems] = K
+    E[0 : 3 * nelems, [-1, -2, -3]] = G.T
+    E[[-1, -2, -3], 0 : 3 * nelems] = G
+    rhs = np.zeros(3 * nelems + num_shared_edges)
 
     print("\nMatrix E w/ Lagrange Multipliers")
     print(E)
 
     # Apply boundary condition to E
+    bcs = [
+        [8, 1.0],
+        [4, 1.0],
+        [0, -1.0],
+        [9, -1.0],
+        # [10, 0.0],
+        # [2, 0.0],
+    ]
+
+    for bc in bcs:
+        t = bc[0]  # tag
+        v = bc[1]  # value
+        print(t, v)
+        E[t, :] = 0.0
+        E[t, t] = 1.0
+        rhs[t] = v
     # bc = 0
     # E[bc, :] = 0.0
     # E[bc, bc] = 1.0
@@ -390,21 +416,21 @@ if __name__ == "__main__":
     # E[0, 0] = 1.0
     # rhs[0] = 1.0
 
-    E[2, :] = 0.0
-    E[2, 2] = 1.0
-    rhs[2] = 1.0
+    # E[2, :] = 0.0
+    # E[2, 2] = 1.0
+    # rhs[2] = 1.0
 
-    E[4, :] = 0.0
-    E[4, 4] = 1.0
-    rhs[4] = 1.0
+    # E[4, :] = 0.0
+    # E[4, 4] = 1.0
+    # rhs[4] = 1.0
 
     # E[7, :] = 0.0
     # E[7, 7] = 1.0
     # rhs[7] = 0.0
 
-    E[8, :] = 0.0
-    E[8, 8] = 1.0
-    rhs[8] = 1.0
+    # E[8, :] = 0.0
+    # E[8, 8] = 1.0
+    # rhs[8] = 1.0
 
     print("\nMatrix E w/ BCs")
     print(E)
@@ -423,6 +449,7 @@ if __name__ == "__main__":
     soln1 = u[elem_edge_conn[0]]
     soln2 = u[elem_edge_conn[1]]
     soln3 = u[elem_edge_conn[2]]
+    soln4 = u[elem_edge_conn[3]]
     plot_element_solution(
         0, edge_conn, elem_edge_conn, X, soln1, fig1, ax1, signs=[1, 1, 1]
     )
@@ -431,6 +458,9 @@ if __name__ == "__main__":
     )
     plot_element_solution(
         2, edge_conn, elem_edge_conn, X, soln3, fig1, ax1, signs=[1, 1, 1]
+    )
+    plot_element_solution(
+        3, edge_conn, elem_edge_conn, X, soln4, fig1, ax1, signs=[1, 1, 1]
     )
     plt.savefig("fem.jpg", dpi=800)
     # plt.show()
