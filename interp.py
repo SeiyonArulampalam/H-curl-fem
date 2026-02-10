@@ -153,7 +153,7 @@ def visualize_element_basis(n1_coord, n2_coord, n3_coord):
     ax[2].triplot(triang, "ro--")
 
     # Compute the vector field inside the element
-    npts = 250  # total number of points in the vector field
+    npts = 100  # total number of points in the vector field
     for i in range(npts):
         # Get the x, y point in the triangle to evaluate the shape function
         x, y = barycenter_sampling(n1_coord, n2_coord, n3_coord)
@@ -188,7 +188,7 @@ def plot_element_solution(n1_coord, n2_coord, n3_coord, soln, fix, ax):
     ax.triplot(triang, "bo--")
 
     # Compute the vector field inside the element
-    npts = 100  # total number of points in the vector field
+    npts = 50  # total number of points in the vector field
     for i in range(npts):
         # Get the x, y point in the triangle to evaluate the shape function
         x, y = barycenter_sampling(n1_coord, n2_coord, n3_coord)
@@ -210,9 +210,9 @@ if __name__ == "__main__":
     # coords
     X = np.array(
         [
-            [0.0, 0.0],
-            [1.0, 0.0],
-            [0.0, 1.0],
+            [-1.0, 0.0],
+            [1.0, -0.8],
+            [-0.5, 1.5],
             [1.0, 2.0],
             [3.0, 0.5],
         ]
@@ -237,8 +237,9 @@ if __name__ == "__main__":
         [4, 3],  # E8
     ]
 
+    #! WHYYYYYYYYYYYYYYYYYYYYY
     elem_edge_conn = [
-        [0, 1, 2],
+        [2, 0, 1],
         [3, 4, 5],
         [7, 8, 6],
     ]
@@ -257,7 +258,7 @@ if __name__ == "__main__":
         n2_coord = X[n2_tag]
         n3_coord = X[n3_tag]
 
-        visualize_element_basis(n1_coord, n2_coord, n3_coord)
+        # visualize_element_basis(n1_coord, n2_coord, n3_coord)
 
         for i in range(3):
             row = elem_edge_conn[e][i]
@@ -279,8 +280,8 @@ if __name__ == "__main__":
     # New system
     E = np.zeros((11, 11))
     E[0:9, 0:9] = K
-    E[0:9, [-2, -1]] = G.T
-    E[[-2, -1], 0:9] = G
+    E[0:9, [-1, -2]] = G.T
+    E[[-1, -2], 0:9] = G
     rhs = np.zeros(11)
     print(E)
 
@@ -305,7 +306,9 @@ if __name__ == "__main__":
     print(E)
     print(rhs)
     u = np.linalg.solve(E, rhs)
-    print(u)
+
+    for i, soln_i in enumerate(u):
+        print(f"u[{i}] = {soln_i:4f}")
 
     # Initialize plot
     fig1, ax1 = plt.subplots()
@@ -322,8 +325,9 @@ if __name__ == "__main__":
 
         # Extract solution
         soln = u[elem_edge_conn[e]]
-        print(soln)
+        print(f"Element: {e}, Edges{elem_edge_conn[e]}, soln: {soln}")
 
         plot_element_solution(n1_coord, n2_coord, n3_coord, soln, fig1, ax1)
 
-    plt.show()
+    plt.savefig("fem.jpg", dpi=800)
+    # plt.show()
