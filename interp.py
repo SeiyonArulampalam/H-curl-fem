@@ -3,11 +3,46 @@ import matplotlib.tri as tri
 import matplotlib.pyplot as plt
 
 
-def TriangleGuassianQuadrature():
-    return
+def TriangleGuassianQuadrature(n1_coord, n2_coord, n3_coord, idx, idy):
+    pts = np.array([[1 / 3, 1 / 3, 1 / 3]])
+    wts = np.array([1.0])
+    I = 0.0
+    for m in range(len(wts)):
+        wt = wts[m]
+
+        L = pts[m]
+        L1 = L[0]
+        L2 = L[1]
+        L3 = L[2]
+
+        # Extract x and y values for each node
+        x1 = n1_coord[0]
+        y1 = n1_coord[1]
+
+        x2 = n2_coord[0]
+        y2 = n2_coord[1]
+
+        x3 = n3_coord[0]
+        y3 = n3_coord[1]
+
+        # Compute the point to evalute the shape functions at
+        x = x1 * L1 + x2 * L2 + x3 * L3
+        y = y1 * L1 + y2 * L2 + y3 * L3
+
+        # Compute the shape stuff
+        N1, N2, N3, curlN1, curlN2, curlN3, area = eval_shape_funcs(
+            n1_coord, n2_coord, n3_coord, x, y
+        )
+
+        # Accumulate
+        N = [N1, N2, N3]
+        curlN = [curlN1, curlN2, curlN3]
+
+        I += wt * (curlN[idx] * curlN[idy] + np.dot(N[idx], N[idy])) * area
+    return I
 
 
-def element_data(n1_coord, n2_coord, n3_coord):
+def eval_shape_funcs(n1_coord, n2_coord, n3_coord, x, y):
     # Extract x and y values for each node
     x1 = n1_coord[0]
     y1 = n1_coord[1]
@@ -46,10 +81,6 @@ def element_data(n1_coord, n2_coord, n3_coord):
     c = [c1, c2, c3]  # c term coeffs
     l = [l1, l2, l3]  # lengths
 
-    return a, b, c, l, area
-
-
-def eval_shape_funcs(a, b, c, l, area, x, y):
     # Area coordinate derivatives
     gradL1 = np.array([b[0], c[0]])  # ∇L_1
     gradL2 = np.array([b[1], c[1]])  # ∇L_2
@@ -79,7 +110,7 @@ def eval_shape_funcs(a, b, c, l, area, x, y):
         (b[2] * c[0] - b[0] * c[2]) - (c[2] * b[0] - c[0] * b[2])
     )
 
-    return N1, N2, N3, curlN1, curlN2, curlN3
+    return N1, N2, N3, curlN1, curlN2, curlN3, area
 
 
 # Barycenter sampling
@@ -105,14 +136,9 @@ def barycenter_sampling(n1_coord, n2_coord, n3_coord):
     return new_point[0], new_point[1]  # xi and eta frame
 
 
-def visualize_element_basis():
+def visualize_element_basis(n1_coord, n2_coord, n3_coord):
     # Initialize plot
-    fig, ax = plt.subplots(nrows=3)
-
-    # Define element
-    n1_coord = np.array([0.0, 0.0])
-    n2_coord = np.array([1.0, 1.0])
-    n3_coord = np.array([0.0, 1.0])
+    fig, ax = plt.subplots(ncols=3)
 
     # Plot the mesh
     triang = tri.Triangulation(
@@ -124,28 +150,95 @@ def visualize_element_basis():
     ax[1].triplot(triang, "go--")
     ax[2].triplot(triang, "ro--")
 
-    # Extract element data
-    a, b, c, l, area = element_data(n1_coord, n2_coord, n3_coord)
-
     # Compute the vector field inside the element
-    npts = 100  # total number of points in the vector field
+    npts = 250  # total number of points in the vector field
     for i in range(npts):
         # Get the x, y point in the triangle to evaluate the shape function
         x, y = barycenter_sampling(n1_coord, n2_coord, n3_coord)
 
         # Evaluate the shape funcs
-        N1, N2, N3, curlN1, curlN2, curlN3 = eval_shape_funcs(a, b, c, l, area, x, y)
-        print(curlN1, curlN2, curlN3)
+        N1, N2, N3, curlN1, curlN2, curlN3, area = eval_shape_funcs(
+            n1_coord, n2_coord, n3_coord, x, y
+        )
 
         # Update the plot
         ax[0].quiver(x, y, N1[0], N1[1], width=4e-3)
         ax[1].quiver(x, y, N2[0], N2[1], width=4e-3)
         ax[2].quiver(x, y, N3[0], N3[1], width=4e-3)
 
-    plt.show()
+    ax[0].set_aspect("equal")
+    ax[1].set_aspect("equal")
+    ax[2].set_aspect("equal")
+    ax[0].set_title(r"$N_1$")
+    ax[1].set_title(r"$N_2$")
+    ax[2].set_title(r"$N_3$")
+    return
+
+
+def plot_element_solution(n1_coord, n2_coord, n3_coord, soln):
+    # Initialize plot
+    fig, ax = plt.subplots()
+
+    # Plot the mesh
+    triang = tri.Triangulation(
+        [n1_coord[0], n2_coord[0], n3_coord[0]],
+        [n1_coord[1], n2_coord[1], n3_coord[1]],
+        [[0, 1, 2]],
+    )
+    ax.triplot(triang, "bo--")
+
+    # Compute the vector field inside the element
+    npts = 250  # total number of points in the vector field
+    for i in range(npts):
+        # Get the x, y point in the triangle to evaluate the shape function
+        x, y = barycenter_sampling(n1_coord, n2_coord, n3_coord)
+
+        # Evaluate the shape funcs
+        N1, N2, N3, curlN1, curlN2, curlN3, area = eval_shape_funcs(
+            n1_coord, n2_coord, n3_coord, x, y
+        )
+
+        E = N1 * soln[0] + N2 * soln[1] + N3 * soln[2]
+
+        # Update the plot
+        ax.quiver(x, y, E[0], E[1], width=4e-3)
+
+    ax.set_aspect("equal")
+    ax.set_title(r"$soln$")
     return
 
 
 if __name__ == "__main__":
+    # Define mesh
+    n1_coord = np.array([0.0, 0.0])
+    n2_coord = np.array([1.0, 0.0])
+    n3_coord = np.array([0.0, 1.0])
+
+    # Compute the stiffness matrix
+    E = np.zeros((3, 3))
+    for row in range(3):
+        for col in range(3):
+            E[row, col] += TriangleGuassianQuadrature(
+                n1_coord, n2_coord, n3_coord, row, col
+            )
+
+    # Create a rhs
+    rhs = np.zeros(3)
+
+    # Apply dirichlet bc
+    bc = 2
+    E[bc, :] = 0.0
+    E[bc, bc] = 1.0
+    rhs[bc] = 1.0
+
+    # Solve
+    print(E)
+    print(rhs)
+    u = np.linalg.solve(E, rhs)
+    print(u)
+
+    plot_element_solution(n1_coord, n2_coord, n3_coord, u)
+
     # Visualize the basis functions
-    visualize_element_basis()
+    visualize_element_basis(n1_coord, n2_coord, n3_coord)
+    plt.show()
