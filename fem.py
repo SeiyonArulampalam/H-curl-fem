@@ -261,6 +261,7 @@ def plot_element_solution(
         ax.quiver(x, y, E[0], E[1], width=4e-3)
 
     ax.set_aspect("equal")
+    # ax.set_axis_off()
     return
 
 
@@ -392,8 +393,8 @@ if __name__ == "__main__":
     # New FEA System with lagrange multipliers
     E = np.zeros((3 * nelems + num_shared_edges, 3 * nelems + num_shared_edges))
     E[0 : 3 * nelems, 0 : 3 * nelems] = K
-    E[0 : 3 * nelems, [-1, -2, -3, -4, -5]] = G.T
-    E[[-1, -2, -3, -4, -5], 0 : 3 * nelems] = G
+    E[0 : 3 * nelems, -num_shared_edges:] = G.T
+    E[-num_shared_edges:, 0 : 3 * nelems] = G
     rhs = np.zeros(3 * nelems + num_shared_edges)
 
     print("\nMatrix E w/ Lagrange Multipliers")
