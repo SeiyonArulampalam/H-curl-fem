@@ -230,7 +230,6 @@ def plot_element_solution(
     soln,
     fix,
     ax,
-    signs=[1.0, 1.0, 1.0],
 ):
     # Get the node coordinates for the element.
     n1_coord, n2_coord, n3_coord = get_node_coords(
@@ -246,7 +245,7 @@ def plot_element_solution(
     ax.triplot(triang, color="grey", linestyle="-", linewidth=1.0)
 
     # Compute the vector field inside the element
-    npts = 150  # total number of points in the vector field
+    npts = 50  # total number of points in the vector field
     for i in range(npts):
         # Get the x, y point in the triangle to evaluate the shape function
         x, y = barycenter_sampling(n1_coord, n2_coord, n3_coord)
@@ -256,7 +255,7 @@ def plot_element_solution(
             n1_coord, n2_coord, n3_coord, x, y
         )
 
-        E = signs[0] * N1 * soln[0] + signs[1] * N2 * soln[1] + signs[2] * N3 * soln[2]
+        E = N1 * soln[0] + N2 * soln[1] + N3 * soln[2]
 
         # Update the plot
         ax.quiver(x, y, E[0], E[1], width=4e-3)
@@ -305,11 +304,13 @@ if __name__ == "__main__":
     X = np.array(
         [
             [0.0, 0.0],  # node 0
-            [1.0, 0.0],  # node 1
-            [0.0, 1.0],  # node 2
-            [1.0, 1.0],  # node 3
-            [2.0, 1.0],  # node 4
-            [2.0, 0.0],  # node 4
+            [1.0, 0.5],  # node 1
+            [0.0, 1.5],  # node 2
+            [1.0, 2.5],  # node 3
+            [2.0, 2.5],  # node 4
+            [2.0, 0.5],  # node 5
+            [3.0, 1.5],  # node 6
+            [3.0, 0.0],  # node 7
         ]
     )
 
@@ -319,6 +320,8 @@ if __name__ == "__main__":
         [3, 2, 1],  # e1
         [1, 4, 3],  # e2
         [1, 5, 4],  # e3
+        [5, 6, 4],  # e4
+        [5, 7, 6],  # e5
     ]
 
     edge_conn = [
@@ -334,13 +337,21 @@ if __name__ == "__main__":
         [1, 5],  # E9
         [5, 4],  # E10
         [4, 1],  # E11
+        [5, 6],  # E12
+        [6, 4],  # E13
+        [4, 5],  # E14
+        [6, 5],  # E15
+        [5, 7],  # E16
+        [7, 6],  # E17
     ]
 
     elem_edge_conn = [
-        [2, 0, 1],
-        [5, 3, 4],
-        [7, 8, 6],
-        [9, 10, 11],
+        [2, 0, 1],  # e0
+        [5, 3, 4],  # e1
+        [7, 8, 6],  # e2
+        [9, 10, 11],  # e3
+        [12, 13, 14],  # e4
+        [15, 16, 17],  # e5
     ]
 
     # Plot the mesh and the connectivity
@@ -370,21 +381,19 @@ if __name__ == "__main__":
     print("\nStiffness Matrix (No BCs)")
     print(K)
 
-    # Define G
-    G = np.array(
-        [
-            [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],  # edge 1, 5
-            [0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0],  # edge 3, 6
-            [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1],  # edge 7, 11
-        ]
-    )
+    # Define G (Constraint jacobian)
+    shared_edges = [[1, 5], [3, 6], [7, 11], [14, 10], [12, 15]]
+    num_shared_edges = len(shared_edges)
+    G = np.zeros((num_shared_edges, len(edge_conn)))
+    for i, pair in enumerate(shared_edges):
+        G[i, pair[0]] = 1.0
+        G[i, pair[1]] = 1.0
 
-    # New system
-    num_shared_edges = 3
+    # New FEA System with lagrange multipliers
     E = np.zeros((3 * nelems + num_shared_edges, 3 * nelems + num_shared_edges))
     E[0 : 3 * nelems, 0 : 3 * nelems] = K
-    E[0 : 3 * nelems, [-1, -2, -3]] = G.T
-    E[[-1, -2, -3], 0 : 3 * nelems] = G
+    E[0 : 3 * nelems, [-1, -2, -3, -4, -5]] = G.T
+    E[[-1, -2, -3, -4, -5], 0 : 3 * nelems] = G
     rhs = np.zeros(3 * nelems + num_shared_edges)
 
     print("\nMatrix E w/ Lagrange Multipliers")
@@ -394,10 +403,10 @@ if __name__ == "__main__":
     bcs = [
         [8, 1.0],
         [4, 1.0],
+        [13, 1.0],
         [0, -1.0],
         [9, -1.0],
-        # [10, 0.0],
-        # [2, 0.0],
+        [16, -1.0],
     ]
 
     for bc in bcs:
@@ -407,30 +416,6 @@ if __name__ == "__main__":
         E[t, :] = 0.0
         E[t, t] = 1.0
         rhs[t] = v
-    # bc = 0
-    # E[bc, :] = 0.0
-    # E[bc, bc] = 1.0
-    # rhs[bc] = 0.0
-
-    # E[0, :] = 0.0
-    # E[0, 0] = 1.0
-    # rhs[0] = 1.0
-
-    # E[2, :] = 0.0
-    # E[2, 2] = 1.0
-    # rhs[2] = 1.0
-
-    # E[4, :] = 0.0
-    # E[4, 4] = 1.0
-    # rhs[4] = 1.0
-
-    # E[7, :] = 0.0
-    # E[7, 7] = 1.0
-    # rhs[7] = 0.0
-
-    # E[8, :] = 0.0
-    # E[8, 8] = 1.0
-    # rhs[8] = 1.0
 
     print("\nMatrix E w/ BCs")
     print(E)
@@ -450,17 +435,13 @@ if __name__ == "__main__":
     soln2 = u[elem_edge_conn[1]]
     soln3 = u[elem_edge_conn[2]]
     soln4 = u[elem_edge_conn[3]]
-    plot_element_solution(
-        0, edge_conn, elem_edge_conn, X, soln1, fig1, ax1, signs=[1, 1, 1]
-    )
-    plot_element_solution(
-        1, edge_conn, elem_edge_conn, X, soln2, fig1, ax1, signs=[1, 1, 1]
-    )
-    plot_element_solution(
-        2, edge_conn, elem_edge_conn, X, soln3, fig1, ax1, signs=[1, 1, 1]
-    )
-    plot_element_solution(
-        3, edge_conn, elem_edge_conn, X, soln4, fig1, ax1, signs=[1, 1, 1]
-    )
+    soln5 = u[elem_edge_conn[4]]
+    soln6 = u[elem_edge_conn[5]]
+    plot_element_solution(0, edge_conn, elem_edge_conn, X, soln1, fig1, ax1)
+    plot_element_solution(1, edge_conn, elem_edge_conn, X, soln2, fig1, ax1)
+    plot_element_solution(2, edge_conn, elem_edge_conn, X, soln3, fig1, ax1)
+    plot_element_solution(3, edge_conn, elem_edge_conn, X, soln4, fig1, ax1)
+    plot_element_solution(4, edge_conn, elem_edge_conn, X, soln5, fig1, ax1)
+    plot_element_solution(5, edge_conn, elem_edge_conn, X, soln6, fig1, ax1)
     plt.savefig("fem.jpg", dpi=800)
     # plt.show()
