@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.tri as tri
 import matplotlib.pyplot as plt
 
+np.set_printoptions(precision=2)
+
 
 def TriangleGuassianQuadrature(n1_coord, n2_coord, n3_coord, idx, idy):
     pts = np.array([[1 / 3, 1 / 3, 1 / 3]])
@@ -175,9 +177,7 @@ def visualize_element_basis(n1_coord, n2_coord, n3_coord):
     return
 
 
-def plot_element_solution(n1_coord, n2_coord, n3_coord, soln):
-    # Initialize plot
-    fig, ax = plt.subplots()
+def plot_element_solution(n1_coord, n2_coord, n3_coord, soln, fix, ax):
 
     # Plot the mesh
     triang = tri.Triangulation(
@@ -188,7 +188,7 @@ def plot_element_solution(n1_coord, n2_coord, n3_coord, soln):
     ax.triplot(triang, "bo--")
 
     # Compute the vector field inside the element
-    npts = 250  # total number of points in the vector field
+    npts = 100  # total number of points in the vector field
     for i in range(npts):
         # Get the x, y point in the triangle to evaluate the shape function
         x, y = barycenter_sampling(n1_coord, n2_coord, n3_coord)
@@ -203,42 +203,127 @@ def plot_element_solution(n1_coord, n2_coord, n3_coord, soln):
         # Update the plot
         ax.quiver(x, y, E[0], E[1], width=4e-3)
 
-    ax.set_aspect("equal")
-    ax.set_title(r"$soln$")
     return
 
 
 if __name__ == "__main__":
-    # Define mesh
-    n1_coord = np.array([0.0, 0.0])
-    n2_coord = np.array([1.0, 0.0])
-    n3_coord = np.array([0.0, 1.0])
+    # coords
+    X = np.array(
+        [
+            [0.0, 0.0],
+            [1.0, 0.0],
+            [0.0, 1.0],
+            [1.0, 2.0],
+            [3.0, 0.5],
+        ]
+    )
 
-    # Compute the stiffness matrix
-    E = np.zeros((3, 3))
-    for row in range(3):
-        for col in range(3):
-            E[row, col] += TriangleGuassianQuadrature(
-                n1_coord, n2_coord, n3_coord, row, col
-            )
+    # elem -> node
+    elem_conn = [
+        [0, 1, 2],
+        [3, 2, 1],
+        [1, 4, 3],
+    ]
 
-    # Create a rhs
-    rhs = np.zeros(3)
+    edge_conn = [
+        [0, 1],  # E0
+        [1, 2],  # E1
+        [2, 0],  # E2
+        [3, 2],  # E3
+        [2, 1],  # E4
+        [1, 3],  # E5
+        [3, 1],  # E6
+        [1, 4],  # E7
+        [4, 3],  # E8
+    ]
 
-    # Apply dirichlet bc
-    bc = 2
-    E[bc, :] = 0.0
-    E[bc, bc] = 1.0
-    rhs[bc] = 1.0
+    elem_edge_conn = [
+        [0, 1, 2],
+        [3, 4, 5],
+        [7, 8, 6],
+    ]
 
-    # Solve
+    # Assemble stiffness matrix
+    K = np.zeros((9, 9))
+    # Loop through each element
+    for e in range(len(elem_conn)):
+        # Extract the node tags
+        n1_tag = elem_conn[e][0]
+        n2_tag = elem_conn[e][1]
+        n3_tag = elem_conn[e][2]
+
+        # Extract the node coordinates
+        n1_coord = X[n1_tag]
+        n2_coord = X[n2_tag]
+        n3_coord = X[n3_tag]
+
+        visualize_element_basis(n1_coord, n2_coord, n3_coord)
+
+        for i in range(3):
+            row = elem_edge_conn[e][i]
+            for j in range(3):
+                col = elem_edge_conn[e][j]
+                K[row, col] += TriangleGuassianQuadrature(
+                    n1_coord, n2_coord, n3_coord, i, j
+                )
+    print(K)
+
+    # Define G
+    G = np.array(
+        [
+            [0, 1, 0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0, 1, 0, 0],
+        ]
+    )
+
+    # New system
+    E = np.zeros((11, 11))
+    E[0:9, 0:9] = K
+    E[0:9, [-2, -1]] = G.T
+    E[[-2, -1], 0:9] = G
+    rhs = np.zeros(11)
+    print(E)
+
+    # Apply boundary condition to E
+    # bc = 0
+    # E[bc, :] = 0.0
+    # E[bc, bc] = 1.0
+    # rhs[bc] = 1.0
+
+    # E[2, :] = 0.0
+    # E[2, 2] = 1.0
+    # rhs[2] = 1.0
+
+    # E[4, :] = 0.0
+    # E[4, 4] = 1.0
+    # rhs[4] = 0.0
+
+    E[8, :] = 0.0
+    E[8, 8] = 1.0
+    rhs[8] = 1.0
+
     print(E)
     print(rhs)
     u = np.linalg.solve(E, rhs)
     print(u)
 
-    plot_element_solution(n1_coord, n2_coord, n3_coord, u)
+    # Initialize plot
+    fig1, ax1 = plt.subplots()
+    for e in range(len(elem_conn)):
+        # Extract the node tags
+        n1_tag = elem_conn[e][0]
+        n2_tag = elem_conn[e][1]
+        n3_tag = elem_conn[e][2]
 
-    # Visualize the basis functions
-    visualize_element_basis(n1_coord, n2_coord, n3_coord)
+        # Extract the node coordinates
+        n1_coord = X[n1_tag]
+        n2_coord = X[n2_tag]
+        n3_coord = X[n3_tag]
+
+        # Extract solution
+        soln = u[elem_edge_conn[e]]
+        print(soln)
+
+        plot_element_solution(n1_coord, n2_coord, n3_coord, soln, fig1, ax1)
+
     plt.show()
