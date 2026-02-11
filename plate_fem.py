@@ -9,7 +9,7 @@ import curl_utils as Hcurl
 np.set_printoptions(precision=2, linewidth=200)
 
 # Create the plate mesh in gmsh
-plate_mesh.create(lc=0.2)
+plate_mesh.create(lc=0.3)
 
 # Parse the mesh
 p = parser.InpParser()
@@ -44,7 +44,7 @@ edge3_tags = [edge_node_conn.index(e) for e in edge3_node_tags]
 
 
 # Plot the mesh and the connectivity
-Hcurl.plot_mesh(X, elem_conn, edge_node_conn, elem_edge_conn, "plate_fem_mesh")
+# Hcurl.plot_mesh(X, elem_conn, edge_node_conn, elem_edge_conn, "plate_fem_mesh")
 
 # Assemble stiffness matrix
 nelems = len(elem_conn)
@@ -104,18 +104,22 @@ for bc in bcs:
 # Solve the problem
 u = np.linalg.solve(E, rhs)
 
-# Initialize plot
-print()
-fig1, ax1 = plt.subplots()
-for e in range(len(elem_conn)):
-    Hcurl.plot_element_solution(
-        e,
-        edge_node_conn,
-        elem_edge_conn,
-        X,
-        u[elem_edge_conn[e]],
-        fig1,
-        ax1,
-        npts=1,
-    )
-plt.savefig("plate_fem.jpg", dpi=800)
+# Plot element by element
+# fig1, ax1 = plt.subplots()
+# for e in range(len(elem_conn)):
+#     Hcurl.plot_element_solution(
+#         e,
+#         edge_node_conn,
+#         elem_edge_conn,
+#         X,
+#         u[elem_edge_conn[e]],
+#         fig1,
+#         ax1,
+#         npts=1,
+#     )
+# plt.savefig("plate_fem.jpg", dpi=800)
+
+# Plot global solution preserving the vector lengths
+Hcurl.plot_vector_field(elem_conn, edge_node_conn, elem_edge_conn, X, u)
+
+plt.show()

@@ -345,3 +345,69 @@ def get_shared_edge_tags(edge_node_conn):
             shared_edges[k] = v
 
     return shared_edges
+
+
+def compute_element_solution_vector(
+    element,
+    edge_node_conn,
+    elem_edge_conn,
+    X,
+    soln,
+):
+    """Compute the solution vector at the centroid of the element"""
+
+    # Get the node coordinates for the element.
+    n1_coord, n2_coord, n3_coord = get_node_coords(
+        element, edge_node_conn, elem_edge_conn, X
+    )
+
+    # Compute the vector field inside the element
+    # Extract x and y values for each node
+    x1 = n1_coord[0]
+    y1 = n1_coord[1]
+
+    x2 = n2_coord[0]
+    y2 = n2_coord[1]
+
+    x3 = n3_coord[0]
+    y3 = n3_coord[1]
+    x = (x1 + x2 + x3) * 1.0 / 3.0
+    y = (y1 + y2 + y3) * 1.0 / 3.0
+
+    # Evaluate the shape funcs
+    N1, N2, N3, curlN1, curlN2, curlN3, area = eval_shape_funcs(
+        n1_coord, n2_coord, n3_coord, x, y
+    )
+
+    E = N1 * soln[0] + N2 * soln[1] + N3 * soln[2]  # Element solution vector
+    return x, y, E
+
+
+def plot_vector_field(elem_conn, edge_node_conn, elem_edge_conn, X, global_solution):
+    fig, ax = plt.subplots()
+
+    # Plot the mesh
+    triang = tri.Triangulation(X[:, 0], X[:, 1], elem_conn)
+    ax.triplot(triang, color="grey", linestyle="--", linewidth=1.0)
+
+    nelems = len(elem_edge_conn)
+    xpts = np.zeros(nelems)
+    ypts = np.zeros(nelems)
+    U = np.zeros(nelems)
+    V = np.zeros(nelems)
+    for e in range(nelems):
+        u_local = global_solution[elem_edge_conn[e]]
+        x, y, E = compute_element_solution_vector(
+            e, edge_node_conn, elem_edge_conn, X, u_local
+        )
+        xpts[e] = x
+        ypts[e] = y
+        U[e] = E[0]
+        V[e] = E[1]
+
+    magnitudes = np.sqrt(U**2 + V**2)
+    U_norm = U / magnitudes
+    V_norm = V / magnitudes
+    q = ax.quiver(xpts, ypts, U_norm, V_norm, magnitudes, width=4e-3, cmap="viridis")
+    fig.colorbar(q, ax=ax)
+    return
