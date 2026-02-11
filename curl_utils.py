@@ -383,7 +383,14 @@ def compute_element_solution_vector(
     return x, y, E
 
 
-def plot_vector_field(elem_conn, edge_node_conn, elem_edge_conn, X, global_solution):
+def plot_vector_field(
+    elem_conn,
+    edge_node_conn,
+    elem_edge_conn,
+    X,
+    global_solution,
+    jpg_name,
+):
     fig, ax = plt.subplots()
 
     # Plot the mesh
@@ -408,6 +415,7 @@ def plot_vector_field(elem_conn, edge_node_conn, elem_edge_conn, X, global_solut
     magnitudes = np.sqrt(U**2 + V**2)
     U_norm = U / magnitudes
     V_norm = V / magnitudes
-    q = ax.quiver(xpts, ypts, U_norm, V_norm, magnitudes, width=4e-3, cmap="viridis")
+    q = ax.quiver(xpts, ypts, U_norm, V_norm, magnitudes, width=4e-3, cmap="jet")
     fig.colorbar(q, ax=ax)
+    plt.savefig(jpg_name + ".jpg", dpi=1000)
     return

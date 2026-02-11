@@ -120,6 +120,4 @@ u = np.linalg.solve(E, rhs)
 # plt.savefig("plate_fem.jpg", dpi=800)
 
 # Plot global solution preserving the vector lengths
-Hcurl.plot_vector_field(elem_conn, edge_node_conn, elem_edge_conn, X, u)
-
-plt.show()
+Hcurl.plot_vector_field(elem_conn, edge_node_conn, elem_edge_conn, X, u, "plate_fem")
