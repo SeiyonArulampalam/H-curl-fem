@@ -258,7 +258,7 @@ def plot_element_solution(
         E = N1 * soln[0] + N2 * soln[1] + N3 * soln[2]
 
         # Update the plot
-        ax.quiver(x, y, E[0], E[1], width=4e-3)
+        ax.quiver(x, y, E[0], E[1], width=4e-3, color="#4138F7")
 
     ax.set_aspect("equal")
     # ax.set_axis_off()
@@ -305,12 +305,12 @@ if __name__ == "__main__":
     X = np.array(
         [
             [0.0, 0.0],  # node 0
-            [1.0, 0.5],  # node 1
-            [0.0, 1.5],  # node 2
+            [1.0, 1.0],  # node 1
+            [0.0, 2.5],  # node 2
             [1.0, 2.5],  # node 3
             [2.0, 2.5],  # node 4
-            [2.0, 0.5],  # node 5
-            [3.0, 1.5],  # node 6
+            [2.0, 1.0],  # node 5
+            [3.0, 2.5],  # node 6
             [3.0, 0.0],  # node 7
         ]
     )
@@ -325,6 +325,7 @@ if __name__ == "__main__":
         [5, 7, 6],  # e5
     ]
 
+    # edge -> node
     edge_conn = [
         [0, 1],  # E0
         [1, 2],  # E1
@@ -346,6 +347,7 @@ if __name__ == "__main__":
         [7, 6],  # E17
     ]
 
+    # elem -> edge
     elem_edge_conn = [
         [2, 0, 1],  # e0
         [5, 3, 4],  # e1
@@ -390,7 +392,10 @@ if __name__ == "__main__":
         G[i, pair[0]] = 1.0
         G[i, pair[1]] = 1.0
 
-    # New FEA System with lagrange multipliers
+    # Finite Element System with Lagrange Multipliers.
+    # The coupled linear system is:
+    #     | K   G.T | | u | = | f |
+    #     | G   0   | | λ |   | 0 |
     E = np.zeros((3 * nelems + num_shared_edges, 3 * nelems + num_shared_edges))
     E[0 : 3 * nelems, 0 : 3 * nelems] = K
     E[0 : 3 * nelems, -num_shared_edges:] = G.T
@@ -432,17 +437,15 @@ if __name__ == "__main__":
     # Initialize plot
     print()
     fig1, ax1 = plt.subplots()
-    soln1 = u[elem_edge_conn[0]]
-    soln2 = u[elem_edge_conn[1]]
-    soln3 = u[elem_edge_conn[2]]
-    soln4 = u[elem_edge_conn[3]]
-    soln5 = u[elem_edge_conn[4]]
-    soln6 = u[elem_edge_conn[5]]
-    plot_element_solution(0, edge_conn, elem_edge_conn, X, soln1, fig1, ax1)
-    plot_element_solution(1, edge_conn, elem_edge_conn, X, soln2, fig1, ax1)
-    plot_element_solution(2, edge_conn, elem_edge_conn, X, soln3, fig1, ax1)
-    plot_element_solution(3, edge_conn, elem_edge_conn, X, soln4, fig1, ax1)
-    plot_element_solution(4, edge_conn, elem_edge_conn, X, soln5, fig1, ax1)
-    plot_element_solution(5, edge_conn, elem_edge_conn, X, soln6, fig1, ax1)
+    for e in range(len(elem_conn)):
+        plot_element_solution(
+            e,
+            edge_conn,
+            elem_edge_conn,
+            X,
+            u[elem_edge_conn[e]],
+            fig1,
+            ax1,
+        )
     plt.savefig("fem.jpg", dpi=800)
     # plt.show()
