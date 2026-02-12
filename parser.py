@@ -81,7 +81,10 @@ class InpParser:
         conn = self.elem_conn[elset][elem_type]
         return np.array([conn[k] for k in sorted(conn.keys())], dtype=int)
 
-    def get_edge_conn(self, elset, elem_type):
+    def get_edge_conn(self, elset, elem_type, edge_counter=0):
+        """
+        edge_counter is the offset to the edge tags. This is used when you have multiple regions in your mesh.
+        """
         conn = self.get_conn(elset, elem_type)
         edge_node_conn = []  # edge -> node
         elem_edge_conn = []  # elem -> edge
@@ -89,7 +92,7 @@ class InpParser:
         if conn.shape[1] != 3:
             raise ValueError("This only works for 3 node triangle")
 
-        edge_counter = 0
+        # edge_counter = 0
         for n0, n1, n2 in conn:
             # Define the edges
             n0 = int(n0)

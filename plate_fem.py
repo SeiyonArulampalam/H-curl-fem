@@ -1,7 +1,4 @@
 import numpy as np
-import matplotlib.tri as tri
-import matplotlib.pyplot as plt
-from collections import defaultdict
 import parser
 import plate_mesh
 import curl_utils as Hcurl
@@ -82,6 +79,8 @@ E = np.zeros((3 * nelems + num_shared_edges, 3 * nelems + num_shared_edges))
 E[0 : 3 * nelems, 0 : 3 * nelems] = K
 E[0 : 3 * nelems, -num_shared_edges:] = G.T
 E[-num_shared_edges:, 0 : 3 * nelems] = G
+
+# Define the rhs vector
 rhs = np.zeros(3 * nelems + num_shared_edges)
 
 # Apply boundary condition to E
