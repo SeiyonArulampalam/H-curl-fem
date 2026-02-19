@@ -99,30 +99,29 @@ rhs = np.zeros(3 * nelems + num_shared_edges)
 I = 10.0
 
 # Use Ampere's Law to apply a flux in the correct orientation
-bcs = [
-    [edge5_tags, I],
-    [edge6_tags, I],
-    [edge7_tags, I],
-    [edge8_tags, I],
-]
+# bcs = [
+#     [edge5_tags, I],
+#     [edge6_tags, I],
+#     [edge7_tags, I],
+#     [edge8_tags, I],
+# ]
 
-for bc in bcs:
-    for t in bc[0]:
-        t = bc[0]  # tag
-        v = bc[1]  # value
-        E[t, :] = 0.0
-        E[t, t] = 1.0
-        rhs[t] = v
+# for bc in bcs:
+#     for t in bc[0]:
+#         t = bc[0]  # tag
+#         v = bc[1]  # value
+#         E[t, :] = 0.0
+#         E[t, t] = 1.0
+#         rhs[t] = v
 
-# # Apply forcing functions to the rhs vector
+# Apply forcing functions to the rhs vector
 # for e in range(len(conn_surface2)):
 #     for i in range(3):
 #         row = elem_edge_conn[e][i]
 #         rhs[row] += Hcurl.TriangleGuassianQuadratureCoils(
-#             Jz, e, edge_node_conn, elem_edge_conn, X, i
+#             10.0, e, edge_node_conn, elem_edge_conn, X, i
 #         )
-# for i in rhs:
-#     print(i)
+
 # Solve the problem
 u = np.linalg.solve(E, rhs)
 

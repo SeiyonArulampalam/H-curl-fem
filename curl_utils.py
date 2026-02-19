@@ -80,6 +80,52 @@ def TriangleGuassianQuadrature(element, edge_conn, elem_edge_conn, X, idx, idy):
     return I
 
 
+def TriangleGuassianQuadratureCoils(Jz, element, edge_conn, elem_edge_conn, X, idx):
+    # Get the node coordinates for the element.
+    n1_coord, n2_coord, n3_coord = get_node_coords(
+        element, edge_conn, elem_edge_conn, X
+    )
+
+    pts = np.array([[1 / 3, 1 / 3, 1 / 3]])
+    wts = np.array([1.0])
+    I = 0.0
+    for m in range(len(wts)):
+        wt = wts[m]
+
+        L = pts[m]
+        L1 = L[0]
+        L2 = L[1]
+        L3 = L[2]
+
+        # Extract x and y values for each node
+        x1 = n1_coord[0]
+        y1 = n1_coord[1]
+
+        x2 = n2_coord[0]
+        y2 = n2_coord[1]
+
+        x3 = n3_coord[0]
+        y3 = n3_coord[1]
+
+        # Compute the point to evalute the shape functions at
+        x = x1 * L1 + x2 * L2 + x3 * L3
+        y = y1 * L1 + y2 * L2 + y3 * L3
+
+        # Compute the shape stuff
+        N1, N2, N3, curlN1, curlN2, curlN3, area = eval_shape_funcs(
+            n1_coord, n2_coord, n3_coord, x, y
+        )
+        N = [N1, N2, N3]
+
+        # Current density vector
+        f = np.array([Jz, Jz])
+
+        # Accumulate
+        I += wt * np.dot(N[idx], f) * area
+
+    return I
+
+
 def eval_shape_funcs(n1_coord, n2_coord, n3_coord, x, y):
     # Extract x and y values for each node
     x1 = n1_coord[0]
@@ -395,7 +441,7 @@ def plot_vector_field(
 
     # Plot the mesh
     triang = tri.Triangulation(X[:, 0], X[:, 1], elem_conn)
-    ax.triplot(triang, color="grey", linestyle="--", linewidth=1.0)
+    ax.triplot(triang, color="#8A8A8A", linestyle="-", linewidth=0.1)
 
     nelems = len(elem_edge_conn)
     xpts = np.zeros(nelems)
